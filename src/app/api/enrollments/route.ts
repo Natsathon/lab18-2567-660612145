@@ -26,8 +26,8 @@ export const GET = async () => {
     const payload = jwt.verify(token, secret) as Payload;
     studentId = (<Payload>payload).studentId;
 
-    // Read role information from the token's payload
-    role = payload.role;
+
+    role = (<Payload>payload).role;
   } catch {
     return NextResponse.json(
       {
@@ -42,11 +42,11 @@ export const GET = async () => {
   if (role === "ADMIN") {
     return NextResponse.json({
       ok: true,
-      enrollments: DB.enrollments, // Show all enrollments for admin
+      enrollments: DB.enrollments, 
     });
   }
 
-  // If the role is not "ADMIN", return only the student's enrollments
+
   const courseNoList = [];
   for (const enroll of DB.enrollments) {
     if (enroll.studentId === studentId) {
@@ -82,7 +82,7 @@ export const POST = async (request: NextRequest) => {
   try {
     const payload = jwt.verify(token, secret) as Payload;
     studentId = (<Payload>payload).studentId;
-    role = payload.role;
+    role = (<Payload>payload).role;
   } catch {
     return NextResponse.json(
       {
@@ -93,11 +93,11 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  // If the role is "ADMIN", restrict access to this route
+
   if (role === "ADMIN") {
     return NextResponse.json(
       {
-        ok: false,
+        ok: true,
         message: "Only students can access this API route",
       },
       { status: 403 }
@@ -130,7 +130,7 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  // Check if the student is already enrolled in the course
+  // Check if the student is already
   const foundEnroll = DB.enrollments.find(
     (x) => x.studentId === studentId && x.courseNo === courseNo
   );
@@ -177,7 +177,7 @@ export const DELETE = async (request: NextRequest) => {
   try {
     const payload = jwt.verify(token, secret) as Payload;
     studentId = payload.studentId;
-    role = payload.role;
+    role = (<Payload>payload).role;
   } catch {
     return NextResponse.json(
       {
@@ -192,14 +192,13 @@ export const DELETE = async (request: NextRequest) => {
   if (role === "ADMIN") {
     return NextResponse.json(
       {
-        ok: false,
+        ok: true,
         message: "Only Student can access this API route",
       },
       { status: 403 }
     );
   }
 
-  //get courseNo from body and validate it
   const body = await request.json();
   const { courseNo } = body;
   if (typeof courseNo !== "string" || courseNo.length !== 6) {
