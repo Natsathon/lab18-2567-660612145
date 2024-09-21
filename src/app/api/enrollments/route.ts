@@ -4,6 +4,63 @@ import jwt from "jsonwebtoken";
 import { headers } from "next/headers";
 import { Payload } from "@lib/DB";
 
+export const GET = async () => {
+  const rawAuthHeader = headers().get("authorization");
+
+  if (!rawAuthHeader || !rawAuthHeader.startsWith("Bearer ")) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Authorization header is required",
+      },
+      { status: 401 }
+    );
+  }
+
+  const token = rawAuthHeader.split(" ")[1];
+  const secret = process.env.JWT_SECRET || "This is my special secret";
+  let studentId = null;
+  let role = null;
+
+  try {
+    const payload = jwt.verify(token, secret) as Payload;
+    studentId = (<Payload>payload).studentId;
+
+    // Read role information from the token's payload
+    role = payload.role;
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Invalid token",
+      },
+      { status: 401 }
+    );
+  }
+
+  // Check role here. If user is "ADMIN", show all of the enrollments instead
+  if (role === "ADMIN") {
+    return NextResponse.json({
+      ok: true,
+      enrollments: DB.enrollments, // Show all enrollments for admin
+    });
+  }
+
+  // If the role is not "ADMIN", return only the student's enrollments
+  const courseNoList = [];
+  for (const enroll of DB.enrollments) {
+    if (enroll.studentId === studentId) {
+      courseNoList.push(enroll.courseNo);
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    courseNoList,
+  });
+};
+
+
 export const POST = async (request: NextRequest) => {
   const rawAuthHeader = headers().get("authorization");
 
@@ -24,7 +81,7 @@ export const POST = async (request: NextRequest) => {
 
   try {
     const payload = jwt.verify(token, secret) as Payload;
-    studentId = payload.studentId;
+    studentId = (<Payload>payload).studentId;
     role = payload.role;
   } catch {
     return NextResponse.json(
@@ -47,7 +104,7 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  // Parse the request body
+
   const body = await request.json();
   const { courseNo } = body;
 
